@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kiku's Kitchen ~ An Evening Feast</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      outline: none;
+    }
+
+    body {
+      background: #0a0b0e;
+      color: #e0e0e0;
+      font-family: "MS Gothic", "Hiragino Kaku Gothic Pro", monospace, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 4:3 Screen Container */
+    #vn-screen {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 4 / 3;
+      background: #000;
+      border: 2px solid #ca6898;
+      overflow: hidden;
+      contain: layout paint;
+    }
+
+    /* Transition Layer */
+    #fade-overlay {
+      position: absolute;
+      inset: 0;
+      background: #000000;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 45;
+      transition: opacity 0.4s ease-in-out;
+    }
+    #fade-overlay.active { opacity: 1; pointer-events: auto; }
+
+    #textbox-container {
+      position: absolute;
+      bottom: 12px;
+      left: 14px;
+      right: 14px;
+      cursor: pointer;
+      z-index: 10;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    #textbox-container.user-hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(12px);
+    }
+
+    #name-box {
+      display: inline-block;
+      background: linear-gradient(180deg, #d881a8 0%, #b85b88 100%);
+      color: #ffffff;
+      border: 2px solid #f6c8de;
+      border-bottom: none;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      padding: 3px 18px;
+      font-size: 13.5px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      box-shadow: 0px -2px 6px rgba(0,0,0,0.2);
+    }
+
+    #dialogue-box {
+      position: relative;
+      background: linear-gradient(180deg, #ca6898 0%, #a24272 100%);
+      background-image: 
+        radial-gradient(rgba(255, 255, 255, 0.25) 1px, transparent 0),
+        linear-gradient(180deg, #cf6e9d 0%, #9e3e6f 100%);
+      background-size: 12px 12px, 100% 100%;
+      border: 2.5px solid #fce3ee;
+      border-radius: 10px;
+      border-top-left-radius: 0px;
+      padding: 12px 65px 12px 16px;
+      opacity: 90%;
+      min-height: 90px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 3px rgba(255,255,255,0.4);
+    }
+
+    #dialogue-text {
+      color: #ffffff;
+      font-size: 10.5px;
+      line-height: 1.4;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+      white-space: pre-wrap;
+    }
+
+    /* Floating Right Stack: Caret directly ABOVE Transparent Auto Button */
+    #action-btn-group {
+      position: absolute;
+      right: 12px;
+      bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #caret {
+      color: #ffe6f2;
+      font-size: 11px;
+      animation: blink 0.5s infinite alternate;
+      line-height: 1;
+    }
+    @keyframes blink { 0% { opacity: 0.2; } 100% { opacity: 1; } }
+
+    .quick-btn-transparent {
+      background: none !important;
+      border: none !important;
+      color: #ffd6e8 !important;
+      font-size: 11px !important;
+      font-weight: bold !important;
+      cursor: pointer !important;
+      padding: 0 !important;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+    }
+    .quick-btn-transparent:hover { color: #ffffff !important; }
+
+    #choice-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    .choice-btn {
+      width: 72%;
+      max-width: 360px;
+      padding: 8px 14px;
+      background: linear-gradient(180deg, #ffd3e6 0%, #f3a0c5 100%);
+      border: 1.5px solid #ffffff;
+      border-radius: 16px;
+      color: #6b1d43;
+      font-size: 12px;
+      font-weight: bold;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .choice-btn:hover {
+      background: #ffffff;
+      color: #a24272;
+      transform: scale(1.03);
+    }
+
+    #menu-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(180deg, #d881a8 0%, #b85b88 100%);
+      border: 1.5px solid #fce3ee;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      z-index: 30;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    #menu-btn span { display: block; width: 16px; height: 2px; background: #ffffff; }
+
+    #system-panel {
+      position: absolute;
+      top: 48px;
+      right: 10px;
+      width: 155px;
+      background: linear-gradient(180deg, #ca6898 0%, #a24272 100%);
+      border: 2px solid #fce3ee;
+      border-radius: 10px;
+      z-index: 35;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    }
+    .menu-item {
+      background: none;
+      border: none;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      color: #ffffff;
+      padding: 7px 11px;
+      text-align: left;
+      font-size: 11.5px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+    }
+    .menu-item:hover { background: rgba(255,255,255,0.2); }
+
+    .overlay-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      background-size: cover;
+      background-position: center;
+    }
+
+    #title-screen {
+      background-color: #0c111a;
+      justify-content: flex-end;
+      align-items: center;
+      padding-bottom: 45px;
+    }
+
+    .title-logo-img {
+      max-width: 320px;
+      max-height: 140px;
+      object-fit: contain;
+      margin-bottom: auto;
+      margin-top: 40px;
+    }
+
+    .title-menu-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 210px;
+    }
+
+    .title-btn {
+      padding: 10px;
+      background: linear-gradient(180deg, #ffd3e6 0%, #f3a0c5 100%);
+      border: 2px solid #ffffff;
+      border-radius: 20px;
+      color: #6b1d43;
+      font-size: 12.5px;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .title-btn:hover {
+      background: #ffffff;
+      color: #a24272;
+      transform: translateY(-2px);
+    }
+
+    #cg-window {
+      position: absolute;
+      inset: 14px;
+      background: linear-gradient(180deg, #571b39 0%, #2e0d1d 100%);
+      border: 2px solid #fce3ee;
+      border-radius: 12px;
+      z-index: 55;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+    #cg-header {
+      padding: 9px 14px;
+      background: linear-gradient(180deg, #d881a8 0%, #b85b88 100%);
+      border-bottom: 1.5px solid #fce3ee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: bold;
+      color: #ffffff;
+    }
+    #cg-body {
+      flex: 1;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .cg-card {
+      background: rgba(0,0,0,0.4);
+      border: 1.5px solid #d881a8;
+      border-radius: 8px;
+      aspect-ratio: 4/3;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cg-card img { width: 100%; height: 100%; object-fit: cover; }
+
+    #cg-viewer {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 70;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #cg-viewer-img { max-width: 90%; max-height: 75%; object-fit: contain; border: 2px solid #fce3ee; border-radius: 8px; }
+    .cg-viewer-controls { margin-top: 14px; display: flex; gap: 12px; }
+
+    #bg-layer { position: absolute; inset: 0; background-size: cover; background-position: center; }
+
+    #stage-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      transition: transform 0.35s ease-in-out;
+    }
+    #stage-layer.shift-right { transform: translateX(18%); }
+
+    #item-box {
+      position: absolute;
+      left: 4%;
+      top: 10%;
+      width: 38%;
+      height: 48%;
+      background: #ffffff;
+      border: 3px solid #fce3ee;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      overflow: hidden;
+    }
+    #item-box img { width: 100%; height: 100%; object-fit: contain; }
+
+    .character-slot {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .character-slot img { width: 100%; height: 100%; object-fit: contain; }
+
+    .pos-left { left: 2%; }
+    .pos-center { left: 50%; transform: translateX(-50%); }
+    .pos-right { right: 2%; }
+
+    #log-window, #save-load-window {
+      position: absolute;
+      inset: 12px;
+      background: #4a1c31;
+      border: 2px solid #fce3ee;
+      border-radius: 12px;
+      z-index: 55;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #log-header, #save-load-header {
+      padding: 9px 14px;
+      background: linear-gradient(180deg, #d881a8 0%, #b85b88 100%);
+      border-bottom: 1.5px solid #fce3ee;
+      display: flex;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    #log-body { flex: 1; padding: 12px; overflow-y: auto; font-size: 13px; color: #fde8f2; }
+    .log-entry { margin-bottom: 10px; border-bottom: 1px solid rgba(252,227,238,0.2); padding-bottom: 6px; }
+    .log-speaker { color: #fca5cf; font-weight: bold; }
+
+    #save-load-body { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+    .slot-item {
+      background: rgba(255,255,255,0.08);
+      border: 1.5px solid #d881a8;
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+    .slot-item:hover { background: rgba(255,255,255,0.18); }
+
+    #confirm-modal {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 65;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #confirm-box {
+      background: linear-gradient(180deg, #ca6898 0%, #a24272 100%);
+      border: 2px solid #fce3ee;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      width: 260px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    }
+
+    #end-screen { background-color: #06080c; cursor: pointer; text-align: center; justify-content: center; align-items: center; }
+    .the-end-text { font-size: 30px; letter-spacing: 4px; color: #fce3ee; margin-bottom: 8px; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div id="vn-screen">
+    <div id="fade-overlay"></div>
+
+    <!-- Title Screen -->
+    <div id="title-screen" class="overlay-screen">
+      <img id="title-logo" class="title-logo-img" src="assets/ui/title_logo.png" alt="Kiku's Kitchen" onerror="this.style.display='none'; document.getElementById('title-fallback').classList.remove('hidden');">
+      <div id="title-fallback" class="game-title hidden" style="font-size:26px; font-weight:bold; color:#fce3ee; margin-bottom: auto; margin-top: 50px;">KIKU'S KITCHEN</div>
+      
+      <div class="title-menu-group">
+        <button class="title-btn" id="btn-start-game">START STORY</button>
+        <button class="title-btn" id="btn-title-load">LOAD GAME</button>
+        <button class="title-btn" id="btn-title-cg">CG GALLERY</button>
+      </div>
+    </div>
+
+    <!-- CG Gallery Window -->
+    <div id="cg-window" class="hidden">
+      <div id="cg-header">
+        <span>CG Gallery</span>
+        <button id="btn-cg-close" style="background:none; border:none; color:#fff; cursor:pointer; font-weight:bold;">[X]</button>
+      </div>
+      <div id="cg-body"></div>
+    </div>
+
+    <!-- CG Fullscreen Viewer -->
+    <div id="cg-viewer" class="hidden">
+      <img id="cg-viewer-img" src="" alt="CG Preview">
+      <div class="cg-viewer-controls">
+        <a id="btn-cg-download" class="title-btn" style="text-decoration:none;" download="cg_artwork.png">Download CG</a>
+        <button class="title-btn" id="btn-cg-viewer-close">Close</button>
+      </div>
+    </div>
+
+    <!-- The End Screen -->
+    <div id="end-screen" class="overlay-screen hidden">
+      <div class="the-end-text">~THE END~</div>
+      <div style="font-size:11px; color:#d881a8;">Click to return to title</div>
+    </div>
+
+    <!-- Menu Hamburger Button -->
+    <button id="menu-btn" title="Menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <!-- Compact Pink System Panel -->
+    <div id="system-panel" class="hidden">
+      <button class="menu-item" id="btn-hide-box">Hide Textbox</button>
+      <button class="menu-item" id="btn-menu-save">Save Game</button>
+      <button class="menu-item" id="btn-menu-load">Load Game</button>
+      <button class="menu-item" id="btn-speed-toggle">Speed: <span id="speed-label" style="color:#fce3ee;">Normal</span></button>
+      <button class="menu-item" id="btn-backlog">Backlog</button>
+      <button class="menu-item" id="btn-restart">Title Screen</button>
+      <button class="menu-item" id="btn-close-menu">Close</button>
+      <button class="menu-item" id="btn-reset-data" style="color: #ff6b81;">Reset ALL Data</button>
+      
+    </div>
+
+    <!-- Save / Load Window -->
+    <div id="save-load-window" class="hidden">
+      <div id="save-load-header">
+        <span id="save-load-title">Save Game</span>
+        <button id="btn-save-load-close" style="background:none; border:none; color:#fff; cursor:pointer;">[X]</button>
+      </div>
+      <div id="save-load-body">
+        <div class="slot-item" data-slot="1">
+          <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; color:#fca5cf;"><span>SLOT 1</span><span class="slot-date">Empty</span></div>
+          <div class="slot-preview" style="font-size:12px; color:#fce3ee;">No save data recorded.</div>
+        </div>
+        <div class="slot-item" data-slot="2">
+          <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; color:#fca5cf;"><span>SLOT 2</span><span class="slot-date">Empty</span></div>
+          <div class="slot-preview" style="font-size:12px; color:#fce3ee;">No save data recorded.</div>
+        </div>
+        <div class="slot-item" data-slot="3">
+          <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; color:#fca5cf;"><span>SLOT 3</span><span class="slot-date">Empty</span></div>
+          <div class="slot-preview" style="font-size:12px; color:#fce3ee;">No save data recorded.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="hidden">
+      <div id="confirm-box">
+        <div id="confirm-text" style="font-size:12.5px; color:#fff; margin-bottom:12px;">Save data to Slot 1?</div>
+        <div style="display:flex; justify-content:center; gap:10px;">
+          <button class="quick-btn-transparent" id="btn-confirm-yes" style="font-size:12px !important; border:1px solid #fff !important; padding:3px 12px !important; border-radius:12px;">Yes</button>
+          <button class="quick-btn-transparent" id="btn-confirm-no" style="font-size:12px !important; border:1px solid #fff !important; padding:3px 12px !important; border-radius:12px;">No</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backlog Window -->
+    <div id="log-window" class="hidden">
+      <div id="log-header">
+        <span>Dialogue History</span>
+        <button id="btn-log-close" style="background:none; border:none; color:#fff; cursor:pointer;">[X]</button>
+      </div>
+      <div id="log-body"></div>
+    </div>
+
+    <!-- Background Layer -->
+    <div id="bg-layer"></div>
+
+    <!-- Illustrative Item Box -->
+    <div id="item-box" class="hidden">
+      <img id="item-img" src="" alt="Cooking Illustration">
+    </div>
+
+    <!-- Sprites Stage Layer -->
+    <div id="stage-layer">
+      <div id="slot-1" class="character-slot"></div>
+      <div id="slot-2" class="character-slot"></div>
+    </div>
+
+    <!-- Choices Overlay -->
+    <div id="choice-overlay" class="hidden"></div>
+
+    <!-- Pink Dialogue Box -->
+    <div id="textbox-container">
+      <div id="name-box">Name</div>
+      <div id="dialogue-box">
+        <div id="dialogue-text">...</div>
+        <div id="action-btn-group">
+          <div id="caret">(∂ ω ∂)</div>
+          <button class="quick-btn-transparent" id="btn-auto">Auto: Off</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="scenario.js"></script>
+
+  <script>
+    const backgrounds = {
+      title: "assets/bg/title.png",
+      room_day: "assets/bg/room_day.png",
+      room_day2: "assets/bg/room_day2.png",
+      market_street: "assets/bg/market.png",
+      kitchen_cooking: "assets/bg/kitchen.png",
+      tatami_dinner: "assets/bg/tatami_dinner.png"
+    };
+
+    const kikuSprites = {
+      normal: "assets/sprites/kiku_n.png",
+      smile: "assets/sprites/kiku_mo.png",
+      sweat: "assets/sprites/kiku_n_p.png"
+    };
+
+    const alfredSprites = {
+      normal: "assets/sprites/alfred_n.png",
+      grin: "assets/sprites/alfred_grin.png",
+      curious: "assets/sprites/alfred_curious.png"
+    };
+
+    const bgmFiles = {
+      peaceful: "assets/audio/bgm_peaceful.mp3",
+      shopping: "assets/audio/bgm_shopping.mp3",
+      kitchen: "assets/audio/bgm_kitchen.mp3"
+    };
+
+    const sfxFiles = {
+      sizzle: "assets/audio/sizzle.wav",
+      phone: "assets/audio/phone_ring.wav",
+      click: "assets/audio/click.wav"
+    };
+
+    function preloadGameAssets() {
+      const urls = [
+        ...Object.values(backgrounds),
+        ...Object.values(kikuSprites),
+        ...Object.values(alfredSprites),
+        "assets/items/chopped_onions.png",
+        "assets/items/ground_meat.png",
+        "assets/items/hambagu_pan.png",
+        "assets/items/hambagu_dish.png"
+      ];
+      urls.forEach(url => {
+        const img = new Image();
+        img.src = url;
+      });
+    }
+
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.bgmAudio = new Audio();
+        this.bgmAudio.loop = true;
+        this.currentBgmKey = null;
+      }
+      initContext() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+      }
+      playBGM(key) {
+        if (!key) { this.stopBGM(); return; }
+        if (this.currentBgmKey === key) return;
+        this.currentBgmKey = key;
+        if (bgmFiles[key]) {
+          this.bgmAudio.src = bgmFiles[key];
+          this.bgmAudio.volume = 0.45;
+          this.bgmAudio.play().catch(() => {});
+        }
+      }
+      stopBGM() {
+        this.currentBgmKey = null;
+        this.bgmAudio.pause();
+        this.bgmAudio.currentTime = 0;
+      }
+      playSFX(key) {
+        if (!key) return;
+        this.initContext();
+        if (sfxFiles[key]) {
+          const snd = new Audio(sfxFiles[key]);
+          snd.volume = 0.7;
+          snd.play().catch(() => {});
+        }
+      }
+    }
+
+    const SPEED_PRESETS = [
+      { label: "Normal", delay: 28 },
+      { label: "Fast", delay: 12 },
+      { label: "Instant", delay: 0 }
+    ];
+    let speedIndex = 0;
+    let currentStep = 0;
+    let isTyping = false;
+    let isTransitioning = false;
+    let isUserHiddenBox = false;
+    let textToDisplay = "";
+    let animationFrameId = null;
+    let pauseTimeoutId = null;
+    let autoPlay = false;
+    let autoTimer = null;
+    let historyLog = [];
+    let currentBgKey = "";
+
+    let activeCharacterSlot1 = null;
+    let activeCharacterSlot2 = null;
+
+    let saveLoadMode = "save";
+    let pendingSlot = null;
+
+    const audio = new SoundEngine();
+
+    const fadeOverlay = document.getElementById("fade-overlay");
+    const titleScreen = document.getElementById("title-screen");
+    const endScreen = document.getElementById("end-screen");
+    const bgLayer = document.getElementById("bg-layer");
+    const stageLayer = document.getElementById("stage-layer");
+    const slot1 = document.getElementById("slot-1");
+    const slot2 = document.getElementById("slot-2");
+    const itemBox = document.getElementById("item-box");
+    const itemImg = document.getElementById("item-img");
+    const nameBox = document.getElementById("name-box");
+    const dialogueText = document.getElementById("dialogue-text");
+    const textboxContainer = document.getElementById("textbox-container");
+    const choiceOverlay = document.getElementById("choice-overlay");
+    const menuBtn = document.getElementById("menu-btn");
+    const systemPanel = document.getElementById("system-panel");
+    const logWindow = document.getElementById("log-window");
+    const logBody = document.getElementById("log-body");
+    const btnAuto = document.getElementById("btn-auto");
+    const btnStartGame = document.getElementById("btn-start-game");
+    const btnTitleLoad = document.getElementById("btn-title-load");
+    const btnTitleCg = document.getElementById("btn-title-cg");
+    const btnSpeedToggle = document.getElementById("btn-speed-toggle");
+    const speedLabel = document.getElementById("speed-label");
+
+    const saveLoadWindow = document.getElementById("save-load-window");
+    const saveLoadTitle = document.getElementById("save-load-title");
+    const btnSaveLoadClose = document.getElementById("btn-save-load-close");
+    const btnMenuSave = document.getElementById("btn-menu-save");
+    const btnMenuLoad = document.getElementById("btn-menu-load");
+    const confirmModal = document.getElementById("confirm-modal");
+    const confirmText = document.getElementById("confirm-text");
+    const btnConfirmYes = document.getElementById("btn-confirm-yes");
+    const btnConfirmNo = document.getElementById("btn-confirm-no");
+
+    const cgWindow = document.getElementById("cg-window");
+    const cgBody = document.getElementById("cg-body");
+    const cgViewer = document.getElementById("cg-viewer");
+    const cgViewerImg = document.getElementById("cg-viewer-img");
+    const btnCgDownload = document.getElementById("btn-cg-download");
+
+    function init() {
+      preloadGameAssets();
+      titleScreen.style.backgroundImage = `url("${backgrounds.title}")`;
+      refreshSlotUI();
+      bindEvents();
+    }
+
+    function triggerFadeTransition(actionCallback) {
+      isTransitioning = true;
+      fadeOverlay.classList.add("active");
+      setTimeout(() => {
+        actionCallback();
+        setTimeout(() => {
+          fadeOverlay.classList.remove("active");
+          isTransitioning = false;
+        }, 50);
+      }, 400);
+    }
+
+document.getElementById("btn-reset-data").onclick = (e) => {
+  e.stopPropagation();
+  if (confirm("Are you sure you want to clear all save slots and unlocked CGs?")) {
+    localStorage.clear();
+    alert("Game storage has been completely reset!");
+    location.reload(); // Reloads the page with clean storage
+  }
+};
+
+
+    function startGame() {
+      audio.initContext();
+      triggerFadeTransition(() => {
+        titleScreen.classList.add("hidden");
+        endScreen.classList.add("hidden");
+        textboxContainer.classList.remove("hidden");
+        textboxContainer.classList.remove("user-hidden");
+        isUserHiddenBox = false;
+        menuBtn.classList.remove("hidden");
+        historyLog = [];
+        currentBgKey = "";
+        activeCharacterSlot1 = null;
+        activeCharacterSlot2 = null;
+        runStep(0);
+      });
+    }
+
+    function returnToTitle() {
+      triggerFadeTransition(() => {
+        cancelAnimationFrame(animationFrameId);
+        clearTimeout(pauseTimeoutId);
+        clearTimeout(autoTimer);
+        autoPlay = false;
+        btnAuto.textContent = "Auto: Off";
+        audio.stopBGM();
+
+        endScreen.classList.add("hidden");
+        systemPanel.classList.add("hidden");
+        logWindow.classList.add("hidden");
+        saveLoadWindow.classList.add("hidden");
+        confirmModal.classList.add("hidden");
+        cgWindow.classList.add("hidden");
+        cgViewer.classList.add("hidden");
+        choiceOverlay.classList.add("hidden");
+        textboxContainer.classList.add("hidden");
+        menuBtn.classList.add("hidden");
+        itemBox.classList.add("hidden");
+        stageLayer.classList.remove("shift-right");
+
+        slot1.innerHTML = ""; slot2.innerHTML = "";
+        activeCharacterSlot1 = null; activeCharacterSlot2 = null;
+        titleScreen.classList.remove("hidden");
+        refreshSlotUI();
+      });
+    }
+
+    function updateCharacter(slotIndex, slotElement, spriteData) {
+      if (!spriteData) {
+        slotElement.innerHTML = "";
+        if (slotIndex === 1) activeCharacterSlot1 = null;
+        else activeCharacterSlot2 = null;
+        return;
+      }
+      const src = spriteData.character === "kiku" ? kikuSprites[spriteData.expr] : alfredSprites[spriteData.expr];
+      slotElement.innerHTML = `<img src="${src}">`;
+    }
+
+    function executeStepLogic(index) {
+      currentStep = index;
+      if (typeof script === "undefined" || !script[index]) return;
+      const data = script[index];
+
+      if (data.bgm !== undefined) audio.playBGM(data.bgm);
+      if (data.sfx) audio.playSFX(data.sfx);
+
+      if (data.cgUnlock) {
+        try {
+          let unlocked = JSON.parse(localStorage.getItem("vn_unlocked_cgs") || "[]");
+          if (!unlocked.some(c => c.id === data.cgUnlock.id)) {
+            unlocked.push(data.cgUnlock);
+            localStorage.setItem("vn_unlocked_cgs", JSON.stringify(unlocked));
+          }
+        } catch(e) {}
+      }
+
+      if (data.jump) {
+        const targetIndex = script.findIndex(item => item.label === data.jump);
+        if (targetIndex !== -1) { runStep(targetIndex); return; }
+      }
+
+      if (data.type === "end") {
+        triggerFadeTransition(() => {
+          textboxContainer.classList.add("hidden");
+          itemBox.classList.add("hidden");
+          stageLayer.classList.remove("shift-right");
+          if (data.bg && backgrounds[data.bg]) endScreen.style.backgroundImage = `url("${backgrounds[data.bg]}")`;
+          endScreen.classList.remove("hidden");
+        });
+        return;
+      }
+
+      if (data.type === "choice") {
+        renderChoices(data.choices);
+        return;
+      }
+
+      choiceOverlay.classList.add("hidden");
+
+      if (data.box === false || data.hideBox === true) {
+        isUserHiddenBox = true;
+        textboxContainer.classList.add("user-hidden");
+      } else {
+        isUserHiddenBox = false;
+        textboxContainer.classList.remove("user-hidden");
+        textboxContainer.classList.remove("hidden");
+      }
+
+      if (data.item) {
+        itemImg.src = data.item;
+        itemBox.classList.remove("hidden");
+        stageLayer.classList.add("shift-right");
+      } else {
+        itemBox.classList.add("hidden");
+        stageLayer.classList.remove("shift-right");
+      }
+
+      if (data.sprite1 !== undefined) updateCharacter(1, slot1, data.sprite1);
+      if (data.sprite2 !== undefined) updateCharacter(2, slot2, data.sprite2);
+
+      if (data.speaker && data.speaker.trim() !== "") {
+        nameBox.classList.remove("hidden");
+        nameBox.textContent = data.speaker;
+      } else {
+        nameBox.classList.add("hidden");
+      }
+
+      historyLog.push({ speaker: data.speaker || "Narrator", text: data.text });
+      renderLog();
+      startTypewriter(data.text);
+    }
+
+    function runStep(index) {
+      if (typeof script === "undefined" || index < 0 || index >= script.length) return;
+      const data = script[index];
+      if (data.bg && backgrounds[data.bg] && data.bg !== currentBgKey) {
+        currentBgKey = data.bg;
+        triggerFadeTransition(() => {
+          bgLayer.style.backgroundImage = `url("${backgrounds[data.bg]}")`;
+          executeStepLogic(index);
+        });
+      } else {
+        executeStepLogic(index);
+      }
+    }
+
+    function getPunctuationPause(char, nextChar) {
+      if (char === '.' && nextChar === '.') return 0;
+      if (char === ',') return 160;
+      if (char === '.' || char === '!' || char === '?') return 260;
+      if (char === '—' || char === '-') return 140;
+      return 0;
+    }
+
+    function startTypewriter(text) {
+      cancelAnimationFrame(animationFrameId);
+      clearTimeout(pauseTimeoutId);
+      clearTimeout(autoTimer);
+      isTyping = true;
+      textToDisplay = text;
+
+      const currentDelay = SPEED_PRESETS[speedIndex].delay;
+
+      if (currentDelay === 0) { finishTypewriter(); return; }
+
+      dialogueText.textContent = "";
+      let charIndex = 0;
+      let lastTime = performance.now();
+
+      function step(now) {
+        const delta = now - lastTime;
+        if (delta >= currentDelay) {
+          const currentChar = text[charIndex];
+          const nextChar = charIndex + 1 < text.length ? text[charIndex + 1] : "";
+          charIndex++;
+          dialogueText.textContent = text.slice(0, charIndex);
+          lastTime = now;
+
+          const pauseDuration = getPunctuationPause(currentChar, nextChar);
+          if (pauseDuration > 0 && charIndex < text.length) {
+            pauseTimeoutId = setTimeout(() => {
+              lastTime = performance.now();
+              animationFrameId = requestAnimationFrame(step);
+            }, pauseDuration);
+            return;
+          }
+        }
+        if (charIndex < text.length) animationFrameId = requestAnimationFrame(step);
+        else finishTypewriter();
+      }
+      animationFrameId = requestAnimationFrame(step);
+    }
+
+    function finishTypewriter() {
+      cancelAnimationFrame(animationFrameId);
+      clearTimeout(pauseTimeoutId);
+      dialogueText.textContent = textToDisplay;
+      isTyping = false;
+      if (autoPlay) {
+        autoTimer = setTimeout(advance, Math.max(1200, textToDisplay.length * 28));
+      }
+    }
+
+    function advance() {
+      if (isTransitioning) return;
+      if (isUserHiddenBox) {
+        isUserHiddenBox = false;
+        textboxContainer.classList.remove("user-hidden");
+        return;
+      }
+      if (isTyping) { finishTypewriter(); return; }
+      if (typeof script === "undefined" || script[currentStep].type === "choice" || script[currentStep].type === "end") return;
+      if (currentStep + 1 < script.length) runStep(currentStep + 1);
+    }
+
+    function renderChoices(choices) {
+      choiceOverlay.innerHTML = "";
+      choices.forEach(c => {
+        const btn = document.createElement("button");
+        btn.className = "choice-btn";
+        btn.textContent = c.text;
+        btn.onclick = () => {
+          audio.playSFX("click");
+          const targetIndex = script.findIndex(item => item.label === c.target);
+          if (targetIndex !== -1) {
+            choiceOverlay.classList.add("hidden");
+            runStep(targetIndex);
+          }
+        };
+        choiceOverlay.appendChild(btn);
+      });
+      choiceOverlay.classList.remove("hidden");
+    }
+
+    function renderLog() {
+      logBody.innerHTML = "";
+      historyLog.forEach(entry => {
+        const row = document.createElement("div");
+        row.className = "log-entry";
+        row.innerHTML = `<div class="log-speaker">${entry.speaker}</div><div>${entry.text}</div>`;
+        logBody.appendChild(row);
+      });
+      logBody.scrollTop = logBody.scrollHeight;
+    }
+
+    function refreshSlotUI() {
+      for (let i = 1; i <= 3; i++) {
+        const slotEl = document.querySelector(`.slot-item[data-slot="${i}"]`);
+        if (!slotEl) continue;
+
+        const rawData = localStorage.getItem(`vn_save_slot_${i}`);
+        const dateEl = slotEl.querySelector(".slot-date");
+        const previewEl = slotEl.querySelector(".slot-preview");
+
+        if (rawData) {
+          try {
+            const data = JSON.parse(rawData);
+            dateEl.textContent = data.timestamp;
+            dateEl.style.color = "#fca5cf";
+            previewEl.textContent = `${data.speaker ? data.speaker + ": " : ""}${data.textSnippet}`;
+          } catch(e) {
+            dateEl.textContent = "Empty";
+            previewEl.textContent = "No save data recorded.";
+          }
+        } else {
+          dateEl.textContent = "Empty";
+          previewEl.textContent = "No save data recorded.";
+        }
+      }
+    }
+
+    function openSaveLoadWindow(mode) {
+      saveLoadMode = mode;
+      saveLoadTitle.textContent = mode === "save" ? "Save Game" : "Load Game";
+      refreshSlotUI();
+      systemPanel.classList.add("hidden");
+      saveLoadWindow.classList.remove("hidden");
+    }
+
+    function promptSlotAction(slotNum) {
+      pendingSlot = slotNum;
+      const rawData = localStorage.getItem(`vn_save_slot_${slotNum}`);
+
+      if (saveLoadMode === "save") {
+        confirmText.textContent = `Save progress to Slot ${slotNum}?`;
+        confirmModal.classList.remove("hidden");
+      } else {
+        if (!rawData) return;
+        confirmText.textContent = `Load data from Slot ${slotNum}? Unsaved progress will be lost.`;
+        confirmModal.classList.remove("hidden");
+      }
+    }
+
+    function executeSave(slotNum) {
+      if (typeof script === "undefined") return;
+      const current = script[currentStep];
+      const saveData = {
+        stepIndex: currentStep,
+        bgKey: currentBgKey,
+        bgmKey: audio.currentBgmKey,
+        speaker: current.speaker || "",
+        textSnippet: current.text || "(Scene Transition)",
+        timestamp: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        historyLog: [...historyLog]
+      };
+
+      try {
+        localStorage.setItem(`vn_save_slot_${slotNum}`, JSON.stringify(saveData));
+        audio.playSFX("click");
+      } catch(e) {}
+
+      refreshSlotUI();
+      saveLoadWindow.classList.add("hidden");
+    }
+
+    function executeLoad(slotNum) {
+      const rawData = localStorage.getItem(`vn_save_slot_${slotNum}`);
+      if (!rawData) return;
+
+      try {
+        const data = JSON.parse(rawData);
+        audio.playSFX("click");
+        confirmModal.classList.add("hidden");
+        saveLoadWindow.classList.add("hidden");
+
+        triggerFadeTransition(() => {
+          titleScreen.classList.add("hidden");
+          endScreen.classList.add("hidden");
+          textboxContainer.classList.remove("hidden");
+          textboxContainer.classList.remove("user-hidden");
+          isUserHiddenBox = false;
+          menuBtn.classList.remove("hidden");
+          
+          historyLog = data.historyLog || [];
+          currentBgKey = data.bgKey;
+          activeCharacterSlot1 = null;
+          activeCharacterSlot2 = null;
+          
+          if (data.bgKey && backgrounds[data.bgKey]) {
+            bgLayer.style.backgroundImage = `url("${backgrounds[data.bgKey]}")`;
+          }
+          if (data.bgmKey) {
+            audio.playBGM(data.bgmKey);
+          } else {
+            audio.stopBGM();
+          }
+
+          executeStepLogic(data.stepIndex);
+        });
+      } catch(e) {}
+    }
+
+    function openCGGallery() {
+      cgBody.innerHTML = "";
+      let unlocked = [];
+      try { unlocked = JSON.parse(localStorage.getItem("vn_unlocked_cgs") || "[]"); } catch(e) {}
+
+      if (unlocked.length === 0) {
+        cgBody.innerHTML = `<div style="grid-column: 1/-1; color:#fca5cf; text-align:center; padding-top:40px; font-size:12px;">No CGs unlocked yet. Play the story to unlock artwork!</div>`;
+      } else {
+        unlocked.forEach(cg => {
+          const card = document.createElement("div");
+          card.className = "cg-card";
+          card.innerHTML = `<img src="${cg.src}" alt="${cg.title}">`;
+          card.onclick = () => {
+            cgViewerImg.src = cg.src;
+            btnCgDownload.href = cg.src;
+            cgViewer.classList.remove("hidden");
+          };
+          cgBody.appendChild(card);
+        });
+      }
+      cgWindow.classList.remove("hidden");
+    }
+
+    function bindEvents() {
+      btnStartGame.onclick = (e) => { e.stopPropagation(); startGame(); };
+      btnTitleLoad.onclick = (e) => { e.stopPropagation(); audio.initContext(); openSaveLoadWindow("load"); };
+      btnMenuSave.onclick = (e) => { e.stopPropagation(); openSaveLoadWindow("save"); };
+      btnMenuLoad.onclick = (e) => { e.stopPropagation(); openSaveLoadWindow("load"); };
+
+      btnSpeedToggle.onclick = (e) => {
+        e.stopPropagation();
+        speedIndex = (speedIndex + 1) % SPEED_PRESETS.length;
+        speedLabel.textContent = SPEED_PRESETS[speedIndex].label;
+      };
+
+      document.getElementById("btn-backlog").onclick = (e) => {
+        e.stopPropagation();
+        systemPanel.classList.add("hidden");
+        logWindow.classList.remove("hidden");
+      };
+
+      document.getElementById("btn-log-close").onclick = (e) => { e.stopPropagation(); logWindow.classList.add("hidden"); };
+      document.getElementById("btn-save-load-close").onclick = (e) => { e.stopPropagation(); saveLoadWindow.classList.add("hidden"); };
+
+      document.querySelectorAll(".slot-item").forEach(item => {
+        item.onclick = (e) => {
+          e.stopPropagation();
+          const slotNum = item.getAttribute("data-slot");
+          promptSlotAction(slotNum);
+        };
+      });
+
+      btnConfirmYes.onclick = (e) => {
+        e.stopPropagation();
+        confirmModal.classList.add("hidden");
+        if (saveLoadMode === "save") executeSave(pendingSlot);
+        else executeLoad(pendingSlot);
+      };
+
+      btnConfirmNo.onclick = (e) => {
+        e.stopPropagation();
+        confirmModal.classList.add("hidden");
+      };
+
+      btnTitleCg.onclick = (e) => { e.stopPropagation(); openCGGallery(); };
+      document.getElementById("btn-cg-close").onclick = (e) => { e.stopPropagation(); cgWindow.classList.add("hidden"); };
+      document.getElementById("btn-cg-viewer-close").onclick = (e) => { e.stopPropagation(); cgViewer.classList.add("hidden"); };
+
+      endScreen.onclick = (e) => { e.stopPropagation(); returnToTitle(); };
+      textboxContainer.onclick = (e) => { e.stopPropagation(); advance(); };
+      document.getElementById("vn-screen").onclick = () => { advance(); };
+      
+      btnAuto.onclick = (e) => {
+        e.stopPropagation();
+        autoPlay = !autoPlay;
+        btnAuto.textContent = autoPlay ? "Auto: On" : "Auto: Off";
+        if (autoPlay && !isTyping) advance();
+      };
+
+      document.getElementById("btn-hide-box").onclick = (e) => {
+        e.stopPropagation();
+        systemPanel.classList.add("hidden");
+        isUserHiddenBox = true;
+        textboxContainer.classList.add("user-hidden");
+      };
+
+      menuBtn.onclick = (e) => { e.stopPropagation(); systemPanel.classList.toggle("hidden"); };
+      document.getElementById("btn-close-menu").onclick = (e) => { e.stopPropagation(); systemPanel.classList.add("hidden"); };
+      document.getElementById("btn-restart").onclick = (e) => { e.stopPropagation(); returnToTitle(); };
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
